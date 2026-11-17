@@ -9,42 +9,9 @@ A Claude Code pipeline that takes a feature or a Jira/Linear issue through spec,
 `/factory` is an orchestrator skill. It never writes code itself: it moves each job through a fixed pipeline of specialist subagents, and the agents talk to each other only through Markdown files in the job folder. Nothing is pushed, opened as a PR or merged until that step is authorized in the project's `project.md` or through `/factory approve`.
 
 ```mermaid
-flowchart TD
-    IN(["/factory #lt;feature text | issue URL#gt;<br/>or /factory next"]) --> RP["Resolve project<br/>repo root to project key"]
-    RP --> PR{"project.md<br/>exists?"}
-    PR -- no --> PF["Build project profile<br/>stack, commands, branching,<br/>commit and PR conventions"]
-    PF --> OQ{"Open questions?"}
-    OQ -- yes --> ASK["Ask the user<br/>and record answers"] --> JOB
-    OQ -- no --> JOB
-    PR -- yes --> JOB["Create job<br/>input.md (Jira / Linear / text / backlog)"]
-
-    JOB --> SPEC["factory-spec-writer<br/>spec.md with AC- items"]
-    SPEC --> BUILD["factory-builder<br/>branch, code, tests, commits, build.md"]
-
-    BUILD --> REV
-    subgraph REV ["Review round n (parallel)"]
-        direction LR
-        SEC["security"]
-        UX["ux"]
-        UI["ui"]
-        CODE["code"]
-        BR["browser<br/>(optional)"]
-    end
-
-    REV --> V{"All PASS?"}
-    V -- "CHANGES,<br/>1st round of cycle" --> FB["feedback-n.md<br/>deduplicated, by severity"]
-    FB --> BUILD
-    V -- "PASS, or CHANGES<br/>on 2nd round" --> GATE["Quality gate (gate.md)<br/>reviews, tests, acceptance,<br/>scope, docs, git"]
-
-    GATE --> APR["factory-approver<br/>decision.md"]
-    APR -- ESCALATE --> HUM{"Human decides"}
-    APR -- APPROVE --> AW["awaiting-human"]
-    HUM -- "/factory approve<br/>(override)" --> AW
-    HUM -- "/factory rework" --> RW
-    AW -- "/factory approve<br/>or pre-authorized step" --> INT["Integration steps from project.md<br/>push, PR, ticket, merge"]
-    INT --> DONE(["done<br/>backlog box checked"])
-    AW -- "/factory rework #lt;note#gt;" --> RW["rework-k.md<br/>new cycle"]
-    RW --> BUILD
+flowchart LR
+    A(["/factory"]) --> B["project.md"] --> C["spec"] --> D["build"] --> E["4 reviews<br/>in parallel"] --> F["gate"] --> G["approver"] --> H(["human approves<br/>integration"])
+    E -. CHANGES .-> D
 ```
 
 Key rules:
