@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factory Board</title>
+<style>
+/* dark by default; the Light/Dark button switches theme and is remembered per browser */
+:root{color-scheme:dark;--bg:#131312;--panel:#1c1c1a;--text:#ebebe7;--muted:#9a9a93;--line:#2d2d2a;--accent:#7b93fc;--ok:#51cf66;--warn:#ffa94d;--bad:#ff6b6b;--chip:#292926;--code:#242421;--on:#131312}
+:root[data-theme=light]{color-scheme:light;--bg:#f6f6f3;--panel:#fff;--text:#1c1c1a;--muted:#6d6d67;--line:#e3e3dd;--accent:#3b5bdb;--ok:#2b8a3e;--warn:#d9480f;--bad:#c92a2a;--chip:#eeeee8;--code:#f1f1ec;--on:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--accent)}
+button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:16px;margin:0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.muted{color:var(--muted)} .small{font-size:12px}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .wait{color:var(--warn)}
+.chip{display:inline-block;padding:0 8px;border-radius:10px;background:var(--chip);font-size:12px;white-space:nowrap}
+.count{background:var(--warn);color:var(--on);border-radius:10px;padding:0 7px;font-size:11px;letter-spacing:0}
+.copy{display:inline-flex;gap:8px;align-items:center;padding:4px 8px;max-width:100%} .copy code{overflow-wrap:anywhere} .copy span{font-size:12px;color:var(--accent)}
+.alert{border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 9%,var(--panel));border-radius:8px;padding:10px 12px;margin-top:12px}
+.alert.esc{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--panel))}
+.actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tablewrap{overflow-x:auto}
+ul.plain{list-style:none;padding:0;margin:0} ul.plain li{padding:2px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;overflow-wrap:anywhere;margin-bottom:8px}
+.card .k{font-size:12px;color:var(--muted)}
+.md{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:2px 18px 14px;overflow-wrap:anywhere}
+.md pre{background:var(--code);padding:10px;border-radius:6px;overflow-x:auto} .md code{background:var(--code);padding:0 3px;border-radius:3px}
+.md pre code{padding:0;background:none} .md blockquote{margin:0;padding-left:12px;border-left:3px solid var(--line);color:var(--muted)}
+.md h1{font-size:18px} .md h2{font-size:15px}
+.md th{white-space:nowrap} .md .nw{white-space:nowrap;overflow-wrap:normal}
+.kv{display:grid;grid-template-columns:1fr auto;gap:3px 8px;font-size:13px;margin-top:4px;align-items:center}
+.commits li{font-size:13px;padding:3px 0;border-top:1px solid var(--line)} .commits li:first-child{border-top:0}
+.tl{list-style:none;margin:4px 0 0;padding:0 0 0 14px;border-left:2px solid var(--line)} .tl li{position:relative;padding:4px 0 6px 8px;font-size:13px;line-height:1.4}
+.tl li::before{content:"";position:absolute;left:-20px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--muted)}
+.empty{max-width:560px;margin:60px auto;text-align:center;color:var(--muted)}
+
+/* layout: job list | run view */
+.layout{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+.side{border-right:1px solid var(--line);background:var(--panel);padding:14px 10px}
+.side-head{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:0 8px 6px}
+#src{flex-basis:100%}
+.proj{display:flex;gap:6px;align-items:center;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:12px 8px 4px}
+.none{color:var(--muted);font-size:12px;padding:2px 8px}
+.job{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:6px 8px;border-radius:6px}
+.job:hover{background:var(--chip)} .job[aria-current=true]{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.job .t,.job .m{display:block} .job .t{font-size:13px;line-height:1.3} .job .m{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+main{padding:18px 24px;min-width:0}
+.head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.head h2{font-size:20px;margin:0}
+.graph{display:flex;align-items:center;overflow-x:auto;padding:16px 4px 10px;margin:14px 0;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.col{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;padding:0 2px}
+.col .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center}
+.link{flex:0 0 18px;height:2px;background:var(--line)}
+.link.back{height:0;background:none;border-top:2px dashed var(--warn)} .col.back .lbl{color:var(--warn)}
+.note{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--panel));border-radius:6px;padding:8px 12px;margin-top:12px}
+.node{display:flex;gap:8px;align-items:center;min-width:132px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);text-align:left}
+.node[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.node .nm,.node .dt{display:block} .node .nm{font-size:13px;font-weight:600} .node .dt{font-size:11px;color:var(--muted)}
+.si{flex:0 0 18px;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:700;color:var(--on);border:2px solid var(--line)}
+.si.s-done{background:var(--ok);border-color:var(--ok)} .si.s-done::after{content:"✓"}
+.si.s-fail{background:var(--bad);border-color:var(--bad)} .si.s-fail::after{content:"✕"}
+.si.s-wait{background:var(--warn);border-color:var(--warn)} .si.s-wait::after{content:"!"}
+.si.s-run{border-color:var(--accent);border-right-color:transparent;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.si.s-run{animation:none;border-right-color:var(--accent)}}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line)}.split{grid-template-columns:1fr}main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side" aria-label="Jobs">
+    <div class="side-head"><h1>Factory</h1><button id="pick" type="button">Open factory folder</button><button id="theme" type="button"></button><span id="src" class="small muted"></span>
+      <input id="dir" type="file" webkitdirectory hidden></div>
+    <div id="jobs"></div>
+  </nav>
+  <main id="detail" aria-live="polite"></main>
+</div>
+<script>
+const AREAS = ['security', 'ux', 'ui', 'code'];
+// a round's reviewers are its verdict keys (browser is optional); empty round: the default four
+const areas = v => Object.keys(v || {}).length ? Object.keys(v) : AREAS;
+const POS = { spec: 0, build: 1, rework: 1, review: 2, gate: 3, approval: 4, escalated: 4, 'awaiting-human': 5, integrating: 5, done: 6 };
+const STATUS = { done: 'done', fail: 'changes', wait: 'needs you', run: 'running', todo: 'pending' };
+let projects = [], boards = {}, raw = '', files = null;
+const sel = { project: null, job: null, node: null }, docCache = new Map();
+const fromHash = () => { [sel.project = null, sel.job = null] = location.hash.slice(1).split('/').filter(Boolean).map(decodeURIComponent); sel.node = null; };
+fromHash();
+addEventListener('hashchange', () => { fromHash(); if (raw) render(); });
+const $ = s => document.querySelector(s);
+
+let theme = 'dark';
+try { theme = localStorage.getItem('factory-theme') || 'dark'; } catch {}
+function setTheme(t) {
+  theme = t; document.documentElement.dataset.theme = t;
+  $('#theme').textContent = t === 'light' ? 'Dark' : 'Light';
+  $('#theme').setAttribute('aria-label', `Switch to ${t === 'light' ? 'dark' : 'light'} theme`);
+}
+setTheme(theme);
+$('#theme').onclick = () => { setTheme(theme === 'light' ? 'dark' : 'light'); try { localStorage.setItem('factory-theme', theme); } catch {} };
+
+// --- markdown (escape first: docs carry untrusted ticket text) ---
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function inline(s) {
+  return esc(s).split(/(`[^`]+`)/).map((p, i) => i % 2 ? `<code>${p.slice(1, -1)}</code>` : p
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|\W)\*([^*\s][^*]*?)\*(?=\W|$)/g, '$1<em>$2</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+  ).join('');
+}
+const cells = l => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+const isList = l => /^\s*([-*+]|\d+\.)\s+/.test(l);
+const isBlock = l => /^(```|#{1,6}\s|\s*>|\s*\|)/.test(l) || isList(l);
+function md(src) {
+  const L = String(src).replace(/\r/g, '').split('\n'), out = [];
+  for (let i = 0; i < L.length;) {
+    const l = L[i]; let m;
+    if (/^```/.test(l)) { const b = []; i++; while (i < L.length && !/^```/.test(L[i])) b.push(L[i++]); i++; out.push(`<pre><code>${esc(b.join('\n'))}</code></pre>`); }
+    else if ((m = l.match(/^(#{1,6})\s+(.*)/))) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; }
+    else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { out.push('<hr>'); i++; }
+    else if (/^\s*>/.test(l)) { const b = []; while (i < L.length && /^\s*>/.test(L[i])) b.push(L[i++].replace(/^\s*>\s?/, '')); out.push(`<blockquote>${md(b.join('\n'))}</blockquote>`); }
+    else if (/^\s*\|/.test(l)) {
+      const rows = []; while (i < L.length && /^\s*\|/.test(L[i])) rows.push(L[i++]);
+      const [head, ...rest] = rows.filter(r => !/^\s*\|?[\s:|-]+\|?\s*$/.test(r)).map(cells);
+      const nw = head.map((_, c) => rest.every(r => (r[c] || '').length <= 14)); // short columns (#, severity) never wrap mid-word
+      const cell = (tag, c, i) => `<${tag}${nw[i] ? ' class="nw"' : ''}>${inline(c)}</${tag}>`;
+      out.push(`<div class="tablewrap"><table><thead><tr>${head.map((c, i) => cell('th', c, i)).join('')}</tr></thead><tbody>${rest.map(r => `<tr>${r.map((c, i) => cell('td', c, i)).join('')}</tr>`).join('')}</tbody></table></div>`);
+    }
+    else if (isList(l)) {
+      const tag = /^\s*\d+\./.test(l) ? 'ol' : 'ul', items = [];
+      while (i < L.length && isList(L[i])) {
+        const ind = L[i].match(/^\s*/)[0].length, t = L[i++].replace(/^\s*([-*+]|\d+\.)\s+/, '')
+          .replace(/^\[ \]\s*/, '☐ ').replace(/^\[[xX]\]\s*/, '☑ ');
+        items.push(`<li style="margin-left:${ind}ch">${inline(t)}</li>`);
+      }
+      out.push(`<${tag}>${items.join('')}</${tag}>`);
+    }
+    else if (!l.trim()) i++;
+    else { const b = []; while (i < L.length && L[i].trim() && !isBlock(L[i])) b.push(L[i++]); out.push(`<p>${b.map(inline).join('<br>')}</p>`); }
+  }
+  return out.join('\n');
+}
+console.assert(!md('<script>x<\/script> [a](javascript:alert(1))').includes('<script') && !md('[a](javascript:1)').includes('href'), 'md: must escape html and drop non-http links');
+console.assert(md('| a | b |\n|---|---|\n| 1 | 2 |').includes('<td class="nw">2</td>'), 'md: tables');
+console.assert(!md('| a |\n|---|\n| ' + 'x'.repeat(20) + ' |').includes('class="nw"'), 'md: long columns may wrap');
+
+// --- data ---
+const url = u => /^https?:\/\//i.test(u || '') ? u : null;
+const link = (u, text) => url(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(text || u)}</a>` : esc(text || u || '');
+const tone = v => ({ PASS: 'ok', pass: 'ok', APPROVE: 'ok', done: 'ok', merged: 'ok', CHANGES: 'bad', fail: 'bad', ESCALATE: 'bad', failed: 'bad', escalated: 'bad', 'awaiting-human': 'wait', pending: 'wait', draft: 'wait' }[v] || '');
+const chip = v => `<span class="chip ${tone(v)}">${esc(v ?? '…')}</span>`;
+const needsHuman = j => !!j.awaiting_human || ['awaiting-human', 'escalated'].includes(j.stage);
+const since = j => j.history.at(-1)?.at || j.updated_at;
+const ago = t => { if (!t) return ''; const m = Math.max(0, Math.round((Date.now() - Date.parse(t)) / 60000)); return m < 60 ? m + 'm' : m < 1440 ? Math.round(m / 60) + 'h' : Math.round(m / 1440) + 'd'; };
+// relative time; a timestamp in the future (clock skew, bad write) shows as a plain clock time instead of "0m ago"
+const rel = t => { if (!t) return ''; const d = (Date.now() - Date.parse(t)) / 60000; return d < -1 ? new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d < 1 ? 'just now' : ago(t) + ' ago'; };
+const icon = s => `<span class="si s-${s}" role="img" aria-label="${STATUS[s]}"></span>`;
+const jobStatus = j => j.stage === 'done' ? 'done' : j.stage === 'failed' ? 'fail' : needsHuman(j) ? 'wait' : 'run';
+const copy = cmd => `<button type="button" class="copy" data-copy="${esc(cmd)}"><code>${esc(cmd)}</code><span>Copy</span></button>`;
+const jobPath = (p, j, f) => `projects/${encodeURIComponent(p.key)}/jobs/${encodeURIComponent(j.id)}/${encodeURIComponent(f)}`;
+// stage stays "review" while the builder fixes a round's feedback; detect it from the files
+function fixing(j) {
+  const r = j.rounds.at(-1), v = r?.verdicts || {}, a = Object.keys(v);
+  return r && j.stage === 'review' && a.length && a.every(k => v[k]) && a.some(k => v[k] === 'CHANGES') && j.docs.includes(`feedback-${r.n}.md`) ? r : null;
+}
+console.assert(fixing({ stage: 'review', docs: ['feedback-1.md'], rounds: [{ n: 1, verdicts: { security: 'PASS', ux: 'CHANGES', ui: 'PASS', code: 'CHANGES' } }] })?.n === 1
+  && !fixing({ stage: 'review', docs: [], rounds: [{ n: 1, verdicts: { security: 'PASS', ux: 'CHANGES', ui: null, code: 'PASS' } }] })
+  && !fixing({ stage: 'review', docs: ['feedback-1.md'], rounds: [{ n: 1, verdicts: { security: 'PASS', ux: 'CHANGES', ui: 'PASS', code: 'PASS', browser: null } }] }), 'fixing: detects feedback round');
+function norm(j) {
+  const i = j.integration || {}, g = j.gate || {};
+  return { ...j, source: j.source || {}, builder: j.builder || {}, rounds: j.rounds || [], tests: j.tests || {},
+    gate: { status: g.status, checks: g.checks || {} }, integration: { steps: i.steps || [], done: i.done || [], next: i.next ?? null },
+    prs: j.prs || [], docs: j.docs || [], history: j.history || [] };
+}
+
+async function readText(path) {
+  if (files) { const f = files.get(path); return f ? f.text() : null; }
+  const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+  return r.ok ? r.text() : null;
+}
+async function refresh() {
+  const pj = await readText('projects.json');
+  if (pj == null) throw new Error('projects.json not found');
+  const list = JSON.parse(pj).projects || [];
+  const texts = await Promise.all(list.map(p => readText(`projects/${encodeURIComponent(p.key)}/board.json`).catch(() => null)));
+  const snap = pj + '\n' + texts.join('\n');
+  if (snap === raw) return;
+  raw = snap; projects = list;
+  boards = Object.fromEntries(list.map((p, i) => {
+    let jobs;
+    try { jobs = (JSON.parse(texts[i] ?? '{}').jobs || []).map(norm).sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')); }
+    catch { jobs = boards[p.key] || []; } // board mid-write: keep the last good copy
+    return [p.key, jobs];
+  }));
+  render();
+}
+async function load() {
+  if (files) return;
+  try { await refresh(); $('#src').textContent = 'live · ' + new Date().toLocaleTimeString(); }
+  catch (e) { $('#src').textContent = location.protocol === 'file:' ? 'file:// cannot read the factory folder' : 'cannot read: ' + e.message; if (!raw) render(); }
+}
+$('#pick').onclick = () => $('#dir').click();
+$('#dir').onchange = async e => {
+  const all = [...e.target.files], p = all.filter(f => /(^|\/)projects\.json$/.test(f.webkitRelativePath)).sort((x, y) => x.webkitRelativePath.length - y.webkitRelativePath.length)[0];
+  if (!p) return alert('No projects.json in that folder. Pick ~/.claude/factory.');
+  const root = p.webkitRelativePath.slice(0, -'projects.json'.length);
+  files = new Map(all.filter(f => f.webkitRelativePath.startsWith(root)).map(f => [f.webkitRelativePath.slice(root.length), f]));
+  raw = ''; docCache.clear();
+  try { await refresh(); $('#src').textContent = 'snapshot · ' + new Date().toLocaleTimeString(); }
+  catch (err) { $('#src').textContent = 'cannot read: ' + err.message; }
+};
+
+// --- pipeline graph: columns of nodes derived from the board fields ---
+function graph(j) {
+  const p = POS[j.stage] ?? -1, st = i => j.stage === 'failed' ? 'fail' : j.stage === 'done' || i < p ? 'done' : i === p ? (needsHuman(j) ? 'wait' : 'run') : 'todo';
+  const cols = [{ label: 'Spec', nodes: [{ key: 'spec', label: 'Spec writer', status: st(0), doc: 'spec.md' }] }, { label: 'Build', nodes: [{ key: 'build', label: 'Builder', status: j.rounds.length && j.stage !== 'failed' ? 'done' : st(1), doc: 'build.md' }] }];
+  const rounds = j.rounds.length ? j.rounds : [{ n: 1, cycle: 1, verdicts: {} }];
+  rounds.forEach((r, i) => {
+    const v = r.verdicts || {}, last = i === rounds.length - 1, nx = rounds[i + 1];
+    cols.push({ label: `Review ${r.n}`, nodes: areas(v).map(a => ({ key: `r${r.n}-${a}`, label: a, doc: `review-${r.n}-${a}.md`,
+      status: v[a] === 'PASS' ? 'done' : v[a] === 'CHANGES' ? 'fail' : last && j.stage === 'review' ? 'run' : 'todo' })) });
+    // the job went back to the builder after this round: feedback fixes, or a /factory rework
+    const back = last ? (j.stage === 'rework' ? 'rework' : fixing(j) ? 'fix' : null) : nx ? ((nx.cycle ?? 1) > (r.cycle ?? 1) ? 'rework' : 'fix') : null;
+    if (!back) return;
+    const k = (last ? j.cycle ?? 2 : nx.cycle ?? 2) - 1;
+    cols.push({ label: back === 'rework' ? 'Rework' : 'Back to builder', back: true, nodes: [{ key: `f${r.n}`, label: 'Builder', status: last ? 'run' : 'done',
+      dt: last ? 'fixing' : 'fixed', doc: back === 'rework' ? `rework-${k}.md` : `feedback-${r.n}.md` }] });
+    if (last) cols.push({ label: `Review ${r.n + 1}`, nodes: areas(v).map(a => ({ key: `r${r.n + 1}-${a}`, label: a, status: 'todo', doc: `review-${r.n + 1}-${a}.md` })) });
+  });
+  cols.push({ label: 'Gate', nodes: [{ key: 'gate', label: 'Quality gate', status: j.gate.status === 'pass' ? 'done' : j.gate.status === 'fail' ? 'fail' : st(3), doc: 'gate.md' }] });
+  cols.push({ label: 'Approval', nodes: [{ key: 'approval', label: 'Approver', status: j.decision === 'APPROVE' ? 'done' : j.decision === 'ESCALATE' ? 'wait' : st(4), doc: 'decision.md' }] });
+  const steps = j.integration.steps.length ? j.integration.steps : ['integration'];
+  cols.push({ label: 'Integration', nodes: steps.map(s => ({ key: 'i-' + s, label: s, doc: null,
+    status: j.integration.done.includes(s) || j.stage === 'done' ? 'done' : s === j.integration.next ? ({ integrating: 'run', 'awaiting-human': 'wait' }[j.stage] || 'todo') : 'todo' })) });
+  return cols;
+}
+
+// --- view ---
+function render() {
+  const all = projects.flatMap(p => (boards[p.key] || []).map(j => ({ p, j }))), inProj = all.filter(x => x.p.key === sel.project);
+  const cur = all.find(x => x.p.key === sel.project && x.j.id === sel.job) || inProj.find(x => needsHuman(x.j)) || inProj[0] || all.find(x => needsHuman(x.j)) || all[0];
+  if (cur && (cur.p.key !== sel.project || cur.j.id !== sel.job)) { sel.project = cur.p.key; sel.job = cur.j.id; sel.node = null; }
+  $('#jobs').innerHTML = projects.map(p => {
+    const js = boards[p.key] || [], n = js.filter(needsHuman).length;
+    return `<div class="proj" title="${esc(p.path)}">${esc(p.name || p.key)}${n ? `<span class="count" aria-label="${n} need you">${n}</span>` : ''}</div>${js.map(j => `
+      <button type="button" class="job" data-p="${esc(p.key)}" data-j="${esc(j.id)}" aria-current="${cur?.j === j}">${icon(jobStatus(j))}
+        <span><span class="t">${esc(j.title || j.id)}</span><span class="m">${esc(j.source.key || j.id)} · ${fixing(j) ? 'back to builder' : esc(j.stage)} · ${rel(since(j))}</span></span></button>`).join('') || '<div class="none">No jobs yet</div>'}`;
+  }).join('');
+  $('#jobs').querySelectorAll('.job').forEach(b => b.onclick = () => {
+    sel.project = b.dataset.p; sel.job = b.dataset.j; sel.node = null;
+    history.replaceState(null, '', '#' + encodeURIComponent(sel.project) + '/' + encodeURIComponent(sel.job));
+    render();
+  });
+  cur ? renderJob(cur.p, cur.j) : renderEmpty();
+}
+function renderEmpty() {
+  $('#detail').innerHTML = `<div class="empty"><p><b>${projects.length ? 'No jobs yet.' : 'No projects yet.'}</b></p>
+    <p>Start one in Claude Code, inside a repo, with <code>/factory &lt;feature or issue URL&gt;</code> or <code>/factory next</code>.</p>
+    ${location.protocol === 'file:' ? '<p>Opened from file:// — serve the folder (<code>python -m http.server 8765 -d ~/.claude/factory</code>) for live updates, or use <b>Open factory folder</b>.</p>' : ''}</div>`;
+}
+function renderJob(p, j) {
+  const cols = graph(j), nodes = cols.flatMap(c => c.nodes);
+  const node = nodes.find(n => n.key === sel.node) || (needsHuman(j) && j.decision && nodes.find(n => n.key === 'approval')) || nodes.find(n => ['wait', 'run'].includes(n.status)) || nodes.find(n => n.status === 'fail') || nodes.filter(n => n.status === 'done').at(-1) || nodes[0];
+  sel.node = node.key;
+  const b = j.builder, t = j.tests, docKey = node.doc && `${p.key}/${j.id}/${node.doc}`, fx = fixing(j);
+  $('#detail').innerHTML = `
+    <div class="small muted">${esc(p.name || p.key)} / ${esc(j.id)}</div>
+    <div class="head"><h2>${esc(j.title || j.id)}</h2>${chip(j.stage)}<span class="small muted"><code>${esc(j.base || '?')}</code> ← <code>${esc(j.branch || '—')}</code></span>
+      ${j.source.url || j.source.key ? `<span class="small">${link(j.source.url, j.source.key || j.source.url)}</span>` : ''}<span class="small muted" title="${esc(j.updated_at)}">updated ${rel(j.updated_at)}</span></div>
+    ${j.summary ? `<p class="muted" style="margin:6px 0 0">${esc(j.summary)}</p>` : ''}
+    ${needsHuman(j) ? `<div class="alert ${j.stage === 'escalated' ? 'esc' : ''}"><b>${j.stage === 'escalated' ? 'Escalated' : 'Needs you'}:</b> ${esc(j.awaiting_human || 'Decision needed.')}
+      <div class="actions">${copy('/factory approve ' + j.id)}${copy('/factory rework ' + j.id + ' <note>')}</div></div>` : ''}
+    ${fx ? `<div class="note">↩ <b>Back to builder:</b> ${esc(areas(fx.verdicts).filter(a => fx.verdicts[a] === 'CHANGES').join(' and '))} requested changes in review round ${esc(fx.n)}. The builder is fixing <code>feedback-${esc(fx.n)}.md</code>; review round ${esc(fx.n + 1)} runs next.</div>`
+      : j.stage === 'rework' ? `<div class="note">↩ <b>Rework:</b> the builder is applying <code>rework-${esc((j.cycle ?? 2) - 1)}.md</code>; a new review round runs next.</div>` : ''}
+    <div class="graph" role="group" aria-label="Pipeline">${cols.map((c, i) => `${i ? `<span class="link${c.back ? ' back' : ''}"></span>` : ''}<div class="col${c.back ? ' back' : ''}"><div class="lbl">${c.back ? '↩ ' : ''}${esc(c.label)}</div>${c.nodes.map(n => `
+      <button type="button" class="node" data-node="${esc(n.key)}" aria-pressed="${n.key === node.key}">${icon(n.status)}<span><span class="nm">${esc(n.label)}</span><span class="dt">${esc(n.dt || STATUS[n.status])}</span></span></button>`).join('')}</div>`).join('')}</div>
+    <div class="split">
+      <section aria-label="Step output"><div class="small muted" style="margin-bottom:6px">${esc(node.doc || 'Integration step')}</div><div id="doc" data-k="${esc(docKey || '')}">${
+        !node.doc ? `<div class="md"><p>Step <code>${esc(node.label)}</code>: ${STATUS[node.status]}.</p>${j.prs.map(pr => `<p>${link(pr.url, 'PR → ' + (pr.target || ''))} ${chip(pr.status)} checks ${chip(pr.checks)}</p>`).join('')}</div>`
+        : !j.docs.includes(node.doc) ? '<p class="muted">Not written yet.</p>' : docCache.get(docKey) || '<p class="muted">Loading…</p>'}</div></section>
+      <aside>
+        <div class="card"><div class="k">Tests</div>${chip(t.status || 'pending')} <code>${esc(t.command || '')}</code><div class="small muted">${esc(t.summary || '')}</div></div>
+        <div class="card"><div class="k">Builder</div>${esc(b.progress || '—')}${b.replaced ? ' <span class="chip wait">instance replaced</span>' : ''}
+          ${(b.commits || []).length ? `<ul class="plain commits">${b.commits.map(c => { const [sha, ...msg] = String(c).split(' '); return `<li><code class="muted">${esc(sha)}</code> ${esc(msg.join(' '))}</li>`; }).join('')}</ul>` : ''}</div>
+        <div class="card"><div class="k">Gate ${chip(j.gate.status || 'pending')}</div>${Object.keys(j.gate.checks).length
+          ? `<div class="kv">${Object.entries(j.gate.checks).map(([k, v]) => `<span>${esc(k)}</span>${v ? chip(v) : '<span class="muted">—</span>'}`).join('')}</div>` : '<span class="muted">Not run yet.</span>'}</div>
+        ${j.prs.length ? `<div class="card"><div class="k">Pull requests</div>${j.prs.map(pr => `<div>${link(pr.url, 'PR → ' + (pr.target || ''))} ${chip(pr.status)}</div>`).join('')}</div>` : ''}
+        <div class="card"><div class="k">History</div><ul class="tl">${[...j.history].reverse().map(h => `<li><div class="small muted" title="${esc(h.at)}">${rel(h.at)} · ${esc(h.stage)}</div>${esc(h.event)}</li>`).join('')}</ul></div>
+      </aside>
+    </div>`;
+  $('#detail').querySelectorAll('[data-node]').forEach(btn => btn.onclick = () => { sel.node = btn.dataset.node; renderJob(p, j); });
+  if (docKey && j.docs.includes(node.doc)) loadDoc(docKey, jobPath(p, j, node.doc), node.doc);
+}
+async function loadDoc(key, path, name) {
+  const text = await readText(path).catch(() => null);
+  const html = `<div class="md">${text == null ? `<p class="muted">Cannot read ${esc(name)}.</p>` : md(text)}</div>`;
+  docCache.set(key, html);
+  const box = $('#doc'); // the user may have moved to another node meanwhile
+  if (box?.dataset.k === key && box.innerHTML !== html) box.innerHTML = html;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  const s = b.querySelector('span'), done = m => { s.textContent = m; setTimeout(() => s.textContent = 'Copy', 1200); };
+  (navigator.clipboard ? navigator.clipboard.writeText(b.dataset.copy) : Promise.reject()).then(() => done('Copied'), () => done('Copy failed'));
+});
+load(); setInterval(load, 5000);
+</script>
+</body>
+</html>
